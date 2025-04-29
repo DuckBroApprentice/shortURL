@@ -108,11 +108,16 @@ func InputURL(w http.ResponseWriter, r *http.Request, client *redis.Client) {
 	}
 	outputInt := RandomNum()
 	outputURL := Base62(RandomNum())
+	fmt.Println(outputURL)
 	//check redis
 	val, err := client.Get(Ctx, outputURL).Result()
+	fmt.Println("After Get outputURL is :", outputURL)      //correct 但會發生同一個網址不同結果 要修正random的起點
+	fmt.Println("After Get outputURL become val is :", val) //沒有set過的key對應的value一定是nil  correct
+	fmt.Println("After Get err is :", err)                  //correct
 	if err != nil {
+		log.Println("val == nil prepare set new key")
 		if err == redis.Nil {
-			set_err := client.Set(Ctx, outputURL, originalURL, 0).Err()
+			set_err := client.Set(Ctx, outputURL, originalURL.String(), 0).Err() //這裡會invalid memory address or nil pointer dereference
 			if set_err != nil {
 				panic(set_err)
 			}
@@ -126,12 +131,16 @@ func InputURL(w http.ResponseWriter, r *http.Request, client *redis.Client) {
 }
 
 func Redirect(w http.ResponseWriter, r *http.Request, client *redis.Client) {
-	shortURL := r.Form.Get("shrot")
+	query := r.URL.Query()
+	shortURL := query.Get("short")
+	log.Printf("Func Redirect Get shortURL: %s\n", shortURL)
 	longURL, err := client.Get(Ctx, shortURL).Result()
+	log.Printf("success Get longURL: %s", longURL)
 	if err == redis.Nil {
-		http.Redirect(w, r, "/", 404)
+		http.Redirect(w, r, "/index", 404)
 	} else if err != nil {
 		log.Println("資料庫錯誤")
 	}
-	http.Redirect(w, r, longURL, 301)
+	log.Printf("shortURL is exist key in redis")
+	http.Redirect(w, r, longURL, http.StatusMovedPermanently)
 }

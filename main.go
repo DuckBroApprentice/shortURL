@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"shorten/app"
@@ -8,8 +9,9 @@ import (
 )
 
 func main() {
+	app.Ctx = context.Background()
 	rdb := redisConn.RedisDB()
-	defer rdb.Close()
+	//defer rdb.Close()
 
 	http.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
 		app.InputURL(w, r, rdb)
